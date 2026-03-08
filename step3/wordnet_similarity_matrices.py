@@ -90,7 +90,11 @@ def extract_synsets(text, remove_stopwords, lemmatize):
             continue
         if lemmatize:
             word = LEMMATIZER.lemmatize(word, pos=wn_pos)
-        syns = wn.synsets(word, pos=wn_pos)
+            syns = wn.synsets(word, pos=wn_pos)
+        else:
+            # Exact surface-form lookup: skip WordNet's internal morphy normalization
+            syns = [s for s in wn.synsets(word, pos=wn_pos)
+                    if word in s.lemma_names()]
         if syns:
             synsets.append(syns[0])
     return synsets
