@@ -3,7 +3,7 @@ Step 3: WordNet-Based Similarity Matrices (GLAO)
 =================================================
 For each of 4 preprocessing configurations, compute a pairwise similarity
 matrix for the 50 attack descriptions using the Greedy Lemma Aligning Overlap
-(GLAO) method with WordNet Wu-Palmer similarity.
+(GLAO) method with WordNet path_similarity.
 
 Configurations (4):
   ┌─────┬──────────────────┬───────────────┐
