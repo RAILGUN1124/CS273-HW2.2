@@ -47,20 +47,24 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 DATA_PATH = os.path.join(ROOT_DIR, "data", "all_data.xlsx")
 OUT_DIR = SCRIPT_DIR
 
-NGRAM_MAP = {"uni": (1, 1), "bi": (2, 2), "tri": (3, 3)}
+# Supported n-gram ranges and scikit-learn vectorizer classes.
+NGRAM_MAP   = {"uni": (1, 1), "bi": (2, 2), "tri": (3, 3)}
 VECTORIZERS = {"BOW": CountVectorizer, "TFIDF": TfidfVectorizer}
 
 
 def load_documents(data_path):
+    """Return the attack-description column headers from the Excel sheet."""
     df_raw = pd.read_excel(data_path, header=0)
+    # Columns A-B are metadata; C onward are the attack descriptions.
     doc_df = df_raw.iloc[:, 2:]
     doc_df = doc_df.dropna(axis=1, how="all")
     return list(doc_df.columns)
 
 
 def preprocess(text, remove_stopwords, apply_stemming):
+    """Lowercase, strip non-alpha characters, then optionally remove stopwords and stem."""
     text = text.lower()
-    text = re.sub(r"[^a-z\s]", " ", text)
+    text = re.sub(r"[^a-z\s]", " ", text)  # keep only letters and spaces
     tokens = text.split()
     if remove_stopwords:
         tokens = [t for t in tokens if t not in STOP_WORDS]
@@ -70,17 +74,24 @@ def preprocess(text, remove_stopwords, apply_stemming):
 
 
 def build_config_label(cfg_num, remove_sw, stem, ngram_key):
-    sw_tag = "noSW" if remove_sw else "withSW"
-    stem_tag = "stem" if stem else "noStem"
+    """Build a human-readable filename label for a given preprocessing config."""
+    sw_tag   = "noSW"   if remove_sw else "withSW"
+    stem_tag = "stem"   if stem      else "noStem"
     return f"cfg{cfg_num:02d}_{sw_tag}_{stem_tag}_{ngram_key}gram"
 
 
 def compute_cosine_matrix(processed_docs, ngram_range, vec_class):
+    """Vectorize documents and return their pairwise cosine-similarity matrix.
+
+    Returns (matrix, vocab_size).  If the vocabulary is empty (e.g. all tokens
+    were stopwords), returns a zero matrix with ones on the diagonal.
+    """
     try:
         vec = vec_class(ngram_range=ngram_range, analyzer="word", min_df=1)
         X = vec.fit_transform(processed_docs)
-        return cosine_similarity(X), X.shape[1]
+        return cosine_similarity(X), X.shape[1]  # X.shape[1] == vocab size
     except ValueError as e:
+        # Fallback: empty vocabulary — identity-like matrix so downstream code works.
         n = len(processed_docs)
         cos_sim = np.zeros((n, n))
         np.fill_diagonal(cos_sim, 1.0)
@@ -88,6 +99,7 @@ def compute_cosine_matrix(processed_docs, ngram_range, vec_class):
 
 
 def save_matrix_csv(cos_sim, documents, label, out_dir):
+    """Save a cosine-similarity matrix as a labelled CSV file."""
     sim_df = pd.DataFrame(cos_sim, index=documents, columns=documents)
     csv_path = os.path.join(out_dir, "csv", f"{label}.csv")
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
@@ -96,10 +108,12 @@ def save_matrix_csv(cos_sim, documents, label, out_dir):
 
 
 def compute_all_matrices(documents, out_dir):
+    """Iterate over all 12 configs × 2 vectorizers and produce 24 CSV matrices."""
+    # Generate all combinations: (remove_sw, stem, ngram) — 2×2×3 = 12 configs.
     configs = list(itertools.product(
-        [False, True],       # remove_stopwords
-        [False, True],       # apply_stemming
-        ["uni", "bi", "tri"] # n-gram
+        [False, True],        # remove_stopwords
+        [False, True],        # apply_stemming
+        ["uni", "bi", "tri"]  # n-gram
     ))
 
     results = []
@@ -121,6 +135,7 @@ def compute_all_matrices(documents, out_dir):
 
 
 def save_individual_heatmaps(results, out_dir):
+    """Save one heatmap PNG per matrix into png/individual/."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -146,6 +161,7 @@ def save_individual_heatmaps(results, out_dir):
 
 
 def save_combined_heatmap(results, out_dir):
+    """Save a single 4×6 grid PNG showing all 24 similarity matrices."""
     try:
         import matplotlib
         matplotlib.use("Agg")

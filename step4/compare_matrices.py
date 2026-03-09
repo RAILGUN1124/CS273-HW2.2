@@ -37,23 +37,31 @@ WORDNET_DIR = os.path.join(ROOT_DIR, "step3", "csv")
 
 
 def load_human_matrix(csv_path):
+    """Load the human similarity matrix CSV and return it as a float NumPy array."""
     human_df = pd.read_csv(csv_path, index_col=0)
     return human_df.values.astype(float)
 
 
 def upper_triangle(mat, k=1):
+    """Return the upper-triangle values of mat, excluding the diagonal (k=1)."""
     return mat[np.triu_indices(mat.shape[0], k=k)]
 
 
 def load_nlp_files():
+    """Collect all BOW/TF-IDF CSVs (step2) and WordNet CSVs (step3), sorted."""
     nlp_files = sorted(glob.glob(os.path.join(BOW_TFIDF_DIR, "*.csv"))) + \
                 sorted(glob.glob(os.path.join(WORDNET_DIR, "*.csv")))
     return nlp_files
 
 
 def compute_correlations(human_tri, nlp_files, expected_shape):
+    """Compute Pearson r between the human upper triangle and each NLP matrix.
+
+    Each NLP matrix is validated against expected_shape before comparison.
+    Returns a list of dicts with Matrix, Source, Technique, Pearson_r, p_value.
+    """
     n = expected_shape[0]
-    triu_idx = np.triu_indices(n, k=1)
+    triu_idx = np.triu_indices(n, k=1)  # precompute indices once for all matrices
     records = []
     for fpath in nlp_files:
         name = os.path.splitext(os.path.basename(fpath))[0]
@@ -62,7 +70,7 @@ def compute_correlations(human_tri, nlp_files, expected_shape):
             mat = df.values.astype(float)
             if mat.shape != expected_shape:
                 raise ValueError(f"shape {mat.shape} != {expected_shape}")
-            nlp_tri = mat[triu_idx]
+            nlp_tri = mat[triu_idx]  # upper triangle excluding diagonal
             r, p = pearsonr(human_tri, nlp_tri)
             source = "WordNet" if "wordnet" in name else "BOW/TF-IDF"
             technique = _get_technique(name)
@@ -75,16 +83,19 @@ def compute_correlations(human_tri, nlp_files, expected_shape):
 
 
 def _get_technique(name: str) -> str:
+    """Derive technique label (BOW, TF-IDF, or WordNet) from a matrix filename."""
     if "wordnet" in name:
         return "WordNet"
     return "BOW" if name.endswith("_BOW") else "TF-IDF"
 
 
-_TECH_COLOR = {"BOW": "steelblue", "TF-IDF": "cornflowerblue", "WordNet": "darkorange"}
-_TECH_COLOR_MAX = {"BOW": "#b30000", "TF-IDF": "#b30000", "WordNet": "#7a3800"}
+# Bar colours per technique; darker shade used for the best-scoring bar in each group.
+_TECH_COLOR     = {"BOW": "steelblue",  "TF-IDF": "cornflowerblue", "WordNet": "darkorange"}
+_TECH_COLOR_MAX = {"BOW": "#b30000",    "TF-IDF": "#b30000",        "WordNet": "#7a3800"}
 
 
 def build_results_df(records):
+    """Sort records by absolute Pearson r (descending) and return as a DataFrame."""
     df = pd.DataFrame(records)
     df["abs_r"] = df["Pearson_r"].abs()
     df = df.sort_values("abs_r", ascending=False).drop(columns="abs_r")
@@ -93,6 +104,7 @@ def build_results_df(records):
 
 
 def save_results_csv(results_df, out_dir):
+    """Write the ranked comparison results to CSV."""
     csv_out = os.path.join(out_dir, "csv", "comparison_results.csv")
     os.makedirs(os.path.dirname(csv_out), exist_ok=True)
     results_df.to_csv(csv_out)
@@ -100,6 +112,11 @@ def save_results_csv(results_df, out_dir):
 
 
 def save_bar_chart(results_df, out_dir):
+    """Produce a horizontal bar chart of all 28 Pearson r values.
+
+    Bars are coloured by technique; the best bar per technique is shown in a
+    darker shade and marked with a star in the y-axis label.
+    """
     max_rows = set(results_df.groupby("Technique")["Pearson_r"].idxmax())
     chart_df = results_df.sort_values("Pearson_r").reset_index(drop=False)
 
@@ -221,7 +238,7 @@ def main():
     print("Loading human similarity matrix …")
     human_mat = load_human_matrix(HUMAN_CSV)
     n = human_mat.shape[0]
-    human_tri = upper_triangle(human_mat)
+    human_tri = upper_triangle(human_mat)  # 1225 values for a 50×50 matrix
     print(f"  Shape: {n}×{n}, upper-triangle elements: {len(human_tri)}")
 
     nlp_files = load_nlp_files()

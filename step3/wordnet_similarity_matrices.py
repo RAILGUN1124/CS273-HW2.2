@@ -15,10 +15,10 @@ Configurations (4):
   │  4  │      Yes         │      Yes      │
   └─────┴──────────────────┴───────────────┘
 
-Similarity method: Greedy Lemma Aligning Overlap (GLAO)
-  sim(d1, d2) = (Σ_{s∈S1} max_{s'∈S2} wup(s,s')
-              +  Σ_{s'∈S2} max_{s∈S1} wup(s',s))
-              / (|S1| + |S2|)
+Similarity method: Greedy Lemma Aligning Overlap (GLAO) with path_similarity
+  sim(d1, d2) = ( Σ_{s∈S1} max_{s'∈S2} path(s,s') / max(|S1|,|S2|)
+               + Σ_{s'∈S2} max_{s∈S1} path(s',s) / max(|S1|,|S2|) ) / 2
+  Both directions are computed and averaged to guarantee symmetry.
 
 Output files (saved to step3/):
   - wordnet_cfg{N}_*.csv   : 50×50 similarity matrix for each config
@@ -49,6 +49,9 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 DATA_PATH = os.path.join(ROOT_DIR, "data", "all_data.xlsx")
 OUT_DIR = SCRIPT_DIR
 
+# Mapping from the first 2 characters of a Penn Treebank tag to the
+# corresponding WordNet POS constant.  JJ covers both 'a' and 's' (adjective
+# satellite) since wn.ADJ retrieves synsets for both types.
 _TB_WN_MAP = {
     "NN": wn.NOUN,
     "VB": wn.VERB,
@@ -56,16 +59,19 @@ _TB_WN_MAP = {
     "RB": wn.ADV,
 }
 
+# Each tuple is (remove_stopwords, lemmatize) — the 4 preprocessing configs.
 CONFIGS = [
-    (False, False),
-    (False, True),
-    (True, False),
-    (True, True),
+    (False, False),  # cfg01: withSW, noLem
+    (False, True),   # cfg02: withSW, lem
+    (True,  False),  # cfg03: noSW,   noLem
+    (True,  True),   # cfg04: noSW,   lem
 ]
 
 
 def load_documents(data_path):
+    """Return the 50 attack-description column headers from the Excel sheet."""
     df_raw = pd.read_excel(data_path, header=0)
+    # Columns A-B are metadata; C onward are the attack descriptions.
     doc_df = df_raw.iloc[:, 2:]
     doc_df = doc_df.dropna(axis=1, how="all")
     doc_df = doc_df.loc[:, doc_df.columns.astype(str).str.strip() != ""]
@@ -73,12 +79,18 @@ def load_documents(data_path):
 
 
 def treebank_to_wn(tb_tag):
+    """Convert a Penn Treebank POS tag to a WordNet POS constant, or None if unsupported."""
     return _TB_WN_MAP.get(tb_tag[:2], None)
 
 
 def extract_synsets(text, remove_stopwords, lemmatize):
+    """Tokenize text and return a list of first synsets for each valid word.
+
+    POS tagging uses Penn Treebank tags; only the four supported WordNet POS
+    categories (n, v, a, r) are kept — all others are dropped.
+    """
     tokens = word_tokenize(text.lower())
-    tokens = [t for t in tokens if t.isalpha()]
+    tokens = [t for t in tokens if t.isalpha()]  # drop punctuation / numbers
     if remove_stopwords:
         tokens = [t for t in tokens if t not in STOP_WORDS]
     if not tokens:
@@ -86,25 +98,29 @@ def extract_synsets(text, remove_stopwords, lemmatize):
     synsets = []
     for word, tb_tag in nltk.pos_tag(tokens):
         wn_pos = treebank_to_wn(tb_tag)
-        if wn_pos is None:
+        if wn_pos is None:  # unsupported POS — skip
             continue
         if lemmatize:
+            # Reduce to base form before lookup so inflected words map to synsets.
             word = LEMMATIZER.lemmatize(word, pos=wn_pos)
             syns = wn.synsets(word, pos=wn_pos)
         else:
-            # Exact surface-form lookup: skip WordNet's internal morphy normalization
+            # Without lemmatization: only include words already in base form.
+            # wn.synsets() runs morphy() internally, so filtering by lemma_names
+            # prevents it from silently lemmatizing inflected forms.
             syns = [s for s in wn.synsets(word, pos=wn_pos)
                     if word in s.lemma_names()]
         if syns:
-            synsets.append(syns[0])
+            synsets.append(syns[0])  # use the most common (first) synset
     return synsets
 
 
-def best_wup(s, candidates):
+def best_path(s, candidates):
+    """Return the highest path_similarity between synset s and any synset in candidates."""
     best = 0.0
     for c in candidates:
         try:
-            score = s.wup_similarity(c)
+            score = s.path_similarity(c)
         except Exception:
             score = None
         if score is not None and score > best:
@@ -113,27 +129,34 @@ def best_wup(s, candidates):
 
 
 def glao_similarity(syn1, syn2):
+    """Greedy Lemma Aligning Overlap (GLAO) between two synset lists.
+
+    Each direction is summed and normalised by max(|S1|, |S2|), then the two
+    directional scores are averaged so the result is symmetric.
+    """
     if not syn1 or not syn2:
         return 0.0
-    sum_fwd = sum(best_wup(s, syn2) for s in syn1)
-    sum_bwd = sum(best_wup(s, syn1) for s in syn2)
-    return (sum_fwd + sum_bwd) / (len(syn1) + len(syn2))
+    max_len = max(len(syn1), len(syn2))
+    sum_fwd = sum(best_path(s, syn2) for s in syn1)  # S1 → S2
+    sum_bwd = sum(best_path(s, syn1) for s in syn2)  # S2 → S1
+    return (sum_fwd + sum_bwd) / (2 * max_len)
 
 
 def compute_glao_matrix(documents, remove_sw, lemmatize):
+    """Build the full n×n GLAO similarity matrix for a list of documents."""
     all_synsets = [extract_synsets(doc, remove_sw, lemmatize) for doc in documents]
     counts = [len(s) for s in all_synsets]
     print(f"  Synset counts — min:{min(counts)}  max:{max(counts)}  mean:{np.mean(counts):.1f}")
 
     n = len(documents)
     mat = np.zeros((n, n))
-    total = n * (n - 1) // 2
+    total = n * (n - 1) // 2  # number of unique pairs
     done = 0
     for i in range(n):
-        mat[i, i] = 1.0
+        mat[i, i] = 1.0  # a document is identical to itself
         for j in range(i + 1, n):
             score = glao_similarity(all_synsets[i], all_synsets[j])
-            mat[i, j] = mat[j, i] = score
+            mat[i, j] = mat[j, i] = score  # matrix is symmetric
             done += 1
             if done % 100 == 0:
                 print(f"  progress: {done}/{total}", end="\r", flush=True)
@@ -176,7 +199,7 @@ def save_combined_heatmap(results, out_dir):
         ax.set_xlabel("Document index")
         ax.set_ylabel("Document index")
     fig.suptitle(
-        "WordNet-Based Similarity Matrices (GLAO / Wu-Palmer)\n"
+        "WordNet-Based Similarity Matrices (GLAO / path_similarity)\n"
         "4 preprocessing configurations",
         fontsize=12,
     )

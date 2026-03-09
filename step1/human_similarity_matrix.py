@@ -22,6 +22,11 @@ OUT_DIR = SCRIPT_DIR
 
 
 def load_document_vectors(data_path):
+    """Load the card-sorting document vectors from the Excel file.
+
+    Returns a DataFrame where each column is one attack description and each
+    row is one participant's sorting vector.
+    """
     df_raw = pd.read_excel(data_path, header=0)
     # Columns A & B are 'Participant #' and 'Group #'; document vectors start at column C
     doc_df = df_raw.iloc[:, 2:]
@@ -31,8 +36,13 @@ def load_document_vectors(data_path):
 
 
 def compute_spearman_matrix(doc_df):
+    """Compute the pairwise Spearman rank-correlation matrix across document columns.
+
+    scipy.stats.spearmanr with axis=0 treats each column as a variable, so the
+    result is an n_docs × n_docs correlation matrix.
+    """
     vectors = doc_df.values.astype(float)
-    corr_matrix, _ = spearmanr(vectors, axis=0)
+    corr_matrix, _ = spearmanr(vectors, axis=0)  # correlate columns (documents)
     # spearmanr returns a scalar when there are only 2 documents
     if np.isscalar(corr_matrix):
         corr_matrix = np.array([[1.0, corr_matrix], [corr_matrix, 1.0]])
@@ -40,6 +50,7 @@ def compute_spearman_matrix(doc_df):
 
 
 def save_csv(corr_matrix, doc_labels, out_dir):
+    """Save the similarity matrix as a labelled CSV file."""
     sim_df = pd.DataFrame(corr_matrix, index=doc_labels, columns=doc_labels)
     csv_path = os.path.join(out_dir, "csv", "human_similarity_matrix.csv")
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
@@ -48,6 +59,7 @@ def save_csv(corr_matrix, doc_labels, out_dir):
 
 
 def save_heatmap(corr_matrix, n_docs, out_dir):
+    """Render the similarity matrix as a coolwarm heatmap and save to PNG."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -78,6 +90,7 @@ def save_heatmap(corr_matrix, n_docs, out_dir):
 
 
 def print_sanity_check(corr_matrix, n_docs):
+    """Assert diagonal is all 1.0 and print off-diagonal summary statistics."""
     print("\nSanity check – diagonal (should all be 1.0):")
     diag = np.diag(corr_matrix)
     assert np.allclose(diag, 1.0), "Diagonal is not all 1.0!"
