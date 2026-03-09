@@ -148,7 +148,7 @@ def save_individual_heatmaps(results, out_dir):
             fig, ax = plt.subplots(figsize=(8, 7))
             im = ax.imshow(mat, vmin=0, vmax=1, cmap="viridis", aspect="auto")
             plt.colorbar(im, ax=ax, label="Cosine similarity")
-            ax.set_title(label.replace("_", "  "), fontsize=10)
+            ax.set_title(label.replace("_", "  "), fontsize=12)
             ax.set_xlabel("Document index")
             ax.set_ylabel("Document index")
             plt.tight_layout()
@@ -158,6 +158,63 @@ def save_individual_heatmaps(results, out_dir):
             print(f"  Saved {png_path}")
     except ImportError:
         print("matplotlib not installed — skipping individual heatmaps.")
+
+
+def save_grouped_heatmaps(results, out_dir):
+    """Save 4 grouped PNGs, each a 2×3 grid (rows=vectorizer, cols=n-gram).
+
+    Groups are the 4 (stop-word, stemming) combinations:
+      1. withSW_noStem  (cfg01–03)
+      2. withSW_stem    (cfg04–06)
+      3. noSW_noStem    (cfg07–09)
+      4. noSW_stem      (cfg10–12)
+    """
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        groups = [
+            ("withSW_noStem",  "With stop-words, no stemming",  [1, 2, 3]),
+            ("withSW_stem",    "With stop-words, stemmed",       [4, 5, 6]),
+            ("noSW_noStem",    "Stop-words removed, no stemming",[7, 8, 9]),
+            ("noSW_stem",      "Stop-words removed, stemmed",    [10, 11, 12]),
+        ]
+        ngram_keys  = ["uni", "bi", "tri"]
+        vec_names   = ["BOW", "TFIDF"]
+
+        # Build a quick lookup: label -> matrix
+        mat_lookup = {label: mat for label, mat in results}
+
+        grouped_dir = os.path.join(out_dir, "png", "grouped")
+        os.makedirs(grouped_dir, exist_ok=True)
+
+        for group_tag, group_title, cfg_nums in groups:
+            fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+
+            for row_idx, vec_name in enumerate(vec_names):
+                for col_idx, (cfg_num, ngram_key) in enumerate(zip(cfg_nums, ngram_keys)):
+                    sw_tag   = "noSW"   if "noSW"  in group_tag else "withSW"
+                    stem_tag = "stem"   if group_tag.endswith("stem") and not group_tag.endswith("noStem") else "noStem"
+                    label = f"cfg{cfg_num:02d}_{sw_tag}_{stem_tag}_{ngram_key}gram_{vec_name}"
+                    mat = mat_lookup.get(label)
+                    ax = axes[row_idx][col_idx]
+                    if mat is not None:
+                        im = ax.imshow(mat, vmin=0, vmax=1, cmap="viridis", aspect="auto")
+                        plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+                    ax.set_title(f"{vec_name} · {ngram_key}gram", fontsize=12)
+                    ax.set_xlabel("Doc index", fontsize=7)
+                    ax.set_ylabel("Doc index", fontsize=7)
+                    ax.tick_params(labelsize=6)
+
+            plt.tight_layout()
+            png_path = os.path.join(grouped_dir, f"group_{group_tag}.png")
+            plt.savefig(png_path, dpi=120)
+            plt.close(fig)
+            print(f"  Grouped heatmap saved → {png_path}")
+
+    except ImportError:
+        print("matplotlib not installed — skipping grouped heatmaps.")
 
 
 def save_combined_heatmap(results, out_dir):
@@ -174,7 +231,7 @@ def save_combined_heatmap(results, out_dir):
         for idx, (label, mat) in enumerate(results):
             ax = axes[idx]
             ax.imshow(mat, vmin=0, vmax=1, cmap="viridis", aspect="auto")
-            ax.set_title(label.replace("cfg", "C").replace("_", "\n"), fontsize=6)
+            ax.set_title(label.replace("cfg", "C").replace("_", "\n"), fontsize=8)
             ax.set_xticks([])
             ax.set_yticks([])
 
@@ -208,6 +265,7 @@ def main():
 
     save_combined_heatmap(results, OUT_DIR)
     save_individual_heatmaps(results, OUT_DIR)
+    save_grouped_heatmaps(results, OUT_DIR)
     print("\nDone.")
 
 
