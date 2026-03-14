@@ -232,6 +232,55 @@ def save_table_png(results_df, out_dir):
     return table_png
 
 
+def save_individual_table_pngs(results_df, out_dir):
+    """Save each technique's comparison table as its own PNG in step4/png/individual/."""
+    ind_dir = os.path.join(out_dir, "png", "individual")
+    os.makedirs(ind_dir, exist_ok=True)
+    saved = []
+    for tech in ["BOW", "TF-IDF", "WordNet"]:
+        sub = results_df[results_df["Technique"] == tech].sort_values(
+            "Pearson_r", ascending=False
+        ).reset_index(drop=True)
+        max_r = sub["Pearson_r"].max()
+        cell_text = [
+            [row["Matrix"], f"{row['Pearson_r']:.4f}", f"{row['p_value']:.3e}"]
+            for _, row in sub.iterrows()
+        ]
+        fig, ax = plt.subplots(figsize=(4, min(3, len(sub) * 0.45 + 1.5)))
+        fig.suptitle(
+            f"Pearson Correlation ({tech}) vs. Human Similarity Matrix\n"
+            "(bold / gold = maximum)",
+            fontsize=12, fontweight="bold",
+        )
+        tbl = ax.table(
+            cellText=cell_text,
+            colLabels=["Configuration", "Pearson r", "p-value"],
+            cellLoc="center", loc="center",
+        )
+        tbl.auto_set_font_size(False)
+        tbl.set_fontsize(8)
+        tbl.auto_set_column_width([0, 1, 2])
+        for col in range(3):
+            tbl[(0, col)].set_facecolor("#2c3e50")
+            tbl[(0, col)].set_text_props(color="white", fontweight="bold")
+        for row_i, (_, row) in enumerate(sub.iterrows(), start=1):
+            if row["Pearson_r"] == max_r:
+                for col in range(3):
+                    tbl[(row_i, col)].set_facecolor("#ffd700")
+                    tbl[(row_i, col)].set_text_props(fontweight="bold")
+            elif row_i % 2 == 0:
+                for col in range(3):
+                    tbl[(row_i, col)].set_facecolor("#f0f0f0")
+        ax.axis("off")
+        plt.tight_layout()
+        safe_tech = tech.replace("/", "_")
+        png_path = os.path.join(ind_dir, f"comparison_table_{safe_tech}.png")
+        plt.savefig(png_path, dpi=130, bbox_inches="tight")
+        plt.close(fig)
+        saved.append(png_path)
+    return saved
+
+
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -256,6 +305,11 @@ def main():
 
     table_out = save_table_png(results_df, OUT_DIR)
     print(f"Summary table saved → {table_out}")
+
+    ind_outs = save_individual_table_pngs(results_df, OUT_DIR)
+    for p in ind_outs:
+        print(f"Individual table saved → {p}")
+
     print("\nDone.")
 
 

@@ -1,0 +1,69 @@
+Loading human similarity matrix …
+  Shape: 50×50, upper-triangle elements: 1225
+Found 28 NLP similarity matrices to compare.
+  cfg01_withSW_noStem_unigram_BOW                          r = +0.4939  p = 2.5103e-76
+  cfg01_withSW_noStem_unigram_TFIDF                        r = +0.4950  p = 1.0123e-76
+  cfg02_withSW_noStem_bigram_BOW                           r = +0.4861  p = 1.1628e-73
+  cfg02_withSW_noStem_bigram_TFIDF                         r = +0.4859  p = 1.4294e-73
+  cfg03_withSW_noStem_trigram_BOW                          r = +0.4209  p = 8.7747e-54
+  cfg03_withSW_noStem_trigram_TFIDF                        r = +0.4168  p = 1.1784e-52
+  cfg04_withSW_stem_unigram_BOW                            r = +0.4941  p = 2.1387e-76
+  cfg04_withSW_stem_unigram_TFIDF                          r = +0.4866  p = 8.2526e-74
+  cfg05_withSW_stem_bigram_BOW                             r = +0.4834  p = 1.0086e-72
+  cfg05_withSW_stem_bigram_TFIDF                           r = +0.4801  p = 1.1966e-71
+  cfg06_withSW_stem_trigram_BOW                            r = +0.4225  p = 3.1473e-54
+  cfg06_withSW_stem_trigram_TFIDF                          r = +0.4171  p = 9.6924e-53
+  cfg07_noSW_noStem_unigram_BOW                            r = +0.5563  p = 1.8817e-100
+  cfg07_noSW_noStem_unigram_TFIDF                          r = +0.5513  p = 2.4823e-98
+  cfg08_noSW_noStem_bigram_BOW                             r = +0.4377  p = 1.6957e-58
+  cfg08_noSW_noStem_bigram_TFIDF                           r = +0.4456  p = 8.3440e-61
+  cfg09_noSW_noStem_trigram_BOW                            r = +0.3824  p = 6.0899e-44
+  cfg09_noSW_noStem_trigram_TFIDF                          r = +0.3834  p = 3.6383e-44
+  cfg10_noSW_stem_unigram_BOW                              r = +0.5557  p = 3.2948e-100
+  cfg10_noSW_stem_unigram_TFIDF                            r = +0.5347  p = 1.5515e-91
+  cfg11_noSW_stem_bigram_BOW                               r = +0.4400  p = 3.7118e-59
+  cfg11_noSW_stem_bigram_TFIDF                             r = +0.4454  p = 9.5796e-61
+  cfg12_noSW_stem_trigram_BOW                              r = +0.3873  p = 4.1456e-45
+  cfg12_noSW_stem_trigram_TFIDF                            r = +0.3881  p = 2.6049e-45
+  wordnet_cfg01_withSW_noLem                               r = +0.4604  p = 2.7380e-65
+  wordnet_cfg02_withSW_lem                                 r = +0.5265  p = 2.5695e-88
+  wordnet_cfg03_noSW_noLem                                 r = +0.4985  p = 6.3297e-78
+  wordnet_cfg04_noSW_lem                                   r = +0.5576  p = 5.2700e-101
+
+Results saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/csv/comparison_results.csv
+                               Matrix      Source Technique  Pearson_r        p_value
+1              wordnet_cfg04_noSW_lem     WordNet   WordNet   0.557581  5.270013e-101
+2       cfg07_noSW_noStem_unigram_BOW  BOW/TF-IDF       BOW   0.556295  1.881657e-100
+3         cfg10_noSW_stem_unigram_BOW  BOW/TF-IDF       BOW   0.555727  3.294794e-100
+4     cfg07_noSW_noStem_unigram_TFIDF  BOW/TF-IDF    TF-IDF   0.551306   2.482326e-98
+5       cfg10_noSW_stem_unigram_TFIDF  BOW/TF-IDF    TF-IDF   0.534726   1.551491e-91
+6            wordnet_cfg02_withSW_lem     WordNet   WordNet   0.526538   2.569463e-88
+7            wordnet_cfg03_noSW_noLem     WordNet   WordNet   0.498465   6.329706e-78
+8   cfg01_withSW_noStem_unigram_TFIDF  BOW/TF-IDF    TF-IDF   0.495037   1.012270e-76
+9       cfg04_withSW_stem_unigram_BOW  BOW/TF-IDF       BOW   0.494105   2.138732e-76
+10    cfg01_withSW_noStem_unigram_BOW  BOW/TF-IDF       BOW   0.493905   2.510349e-76
+11    cfg04_withSW_stem_unigram_TFIDF  BOW/TF-IDF    TF-IDF   0.486581   8.252581e-74
+12     cfg02_withSW_noStem_bigram_BOW  BOW/TF-IDF       BOW   0.486143   1.162791e-73
+13   cfg02_withSW_noStem_bigram_TFIDF  BOW/TF-IDF    TF-IDF   0.485878   1.429433e-73
+14       cfg05_withSW_stem_bigram_BOW  BOW/TF-IDF       BOW   0.483362   1.008596e-72
+15     cfg05_withSW_stem_bigram_TFIDF  BOW/TF-IDF    TF-IDF   0.480147   1.196564e-71
+16         wordnet_cfg01_withSW_noLem     WordNet   WordNet   0.460377   2.738048e-65
+17     cfg08_noSW_noStem_bigram_TFIDF  BOW/TF-IDF    TF-IDF   0.445613   8.343956e-61
+18       cfg11_noSW_stem_bigram_TFIDF  BOW/TF-IDF    TF-IDF   0.445410   9.579573e-61
+19         cfg11_noSW_stem_bigram_BOW  BOW/TF-IDF       BOW   0.439998   3.711801e-59
+20       cfg08_noSW_noStem_bigram_BOW  BOW/TF-IDF       BOW   0.437720   1.695666e-58
+21      cfg06_withSW_stem_trigram_BOW  BOW/TF-IDF       BOW   0.422548   3.147342e-54
+22    cfg03_withSW_noStem_trigram_BOW  BOW/TF-IDF       BOW   0.420920   8.774720e-54
+23    cfg06_withSW_stem_trigram_TFIDF  BOW/TF-IDF    TF-IDF   0.417070   9.692443e-53
+24  cfg03_withSW_noStem_trigram_TFIDF  BOW/TF-IDF    TF-IDF   0.416755   1.178409e-52
+25      cfg12_noSW_stem_trigram_TFIDF  BOW/TF-IDF    TF-IDF   0.388087   2.604895e-45
+26        cfg12_noSW_stem_trigram_BOW  BOW/TF-IDF       BOW   0.387258   4.145552e-45
+27    cfg09_noSW_noStem_trigram_TFIDF  BOW/TF-IDF    TF-IDF   0.383351   3.638332e-44
+28      cfg09_noSW_noStem_trigram_BOW  BOW/TF-IDF       BOW   0.382417   6.089888e-44
+Bar chart saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/png/comparison_bar_chart.png
+Summary table saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/png/comparison_table.png
+Individual table saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/png/individual/comparison_table_BOW.png
+Individual table saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/png/individual/comparison_table_TF-IDF.png
+Individual table saved → /Users/lawrencechen/Downloads/CS273-HW2.2/step4/png/individual/comparison_table_WordNet.png
+
+Done.
