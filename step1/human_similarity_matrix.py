@@ -66,7 +66,7 @@ def save_heatmap(corr_matrix, n_docs, out_dir):
         import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(figsize=(18, 16))
-        im = ax.imshow(corr_matrix, vmin=-1, vmax=1, cmap="coolwarm", aspect="auto")
+        im = ax.imshow(corr_matrix, vmin=-1, vmax=1, cmap="viridis", aspect="auto")
         plt.colorbar(im, ax=ax, label="Spearman ρ")
 
         short_labels = [f"D{i+1}" for i in range(n_docs)]
